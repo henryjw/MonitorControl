@@ -229,6 +229,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       }
       var refreshedSomething = false
       for display in DisplayManager.shared.displays {
+        // Don't refresh the brightness for built-in display if it was off since macOS turns the display back on under some circumstances such as waking up from sleep
+        if display.isBuiltIn() && DisplayManager.shared.displays.count > 1 {
+          let brightness = (display as! AppleDisplay).getAppleBrightness()
+          let oldValue = display.brightnessSyncSourceValue
+          
+          if oldValue < 0.01 && brightness < 0.1 {
+            os_log("Turning off built-in display %{public}@. Old value: %{public}@. Brightness: %{public}@", type: .info, String(display.identifier), String(oldValue), String(brightness))
+            
+            display.setBrightness(0)
+            continue
+          }
+        }
+        
         let delta = display.refreshBrightness()
         if delta != 0 {
           refreshedSomething = true
